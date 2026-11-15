@@ -1,0 +1,6 @@
+﻿cmake_minimum_required(VERSION 3.14)
+project(sizesoul_guard_tests LANGUAGES CXX)
+add_executable(storage_guard_test storage_guard_test.cpp ../../windows/runner/storage_guard.cpp)
+target_compile_features(storage_guard_test PRIVATE cxx_std_17)
+target_compile_definitions(storage_guard_test PRIVATE UNICODE _UNICODE NOMINMAX)
+target_link_libraries(storage_guard_test PRIVATE shell32 ole32)

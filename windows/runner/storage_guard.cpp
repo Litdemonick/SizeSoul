@@ -19,7 +19,7 @@ bool Within(const std::wstring& path, const std::wstring& root) {
 }
 }
 
-std::string RecycleGuarded(HWND owner, const std::wstring& input,
+std::string ValidateRecyclePath(const std::wstring& input,
                            int64_t expected_size, int64_t expected_modified) {
   if (input.size() < 4 || input[1] != L':' || input[2] != L'\\' ||
       !iswalpha(input[0]) || input.find(L':', 2) != std::wstring::npos ||
@@ -27,6 +27,11 @@ std::string RecycleGuarded(HWND owner, const std::wstring& input,
     return "Ruta no permitida. Solo se admiten archivos locales.";
   }
   auto path = Lower(input);
+  wchar_t long_path[32768] = {};
+  const DWORD long_length = GetLongPathNameW(input.c_str(), long_path, 32768);
+  if (long_length == 0 || long_length >= 32768 || Lower(long_path) != path) {
+    return "No se permiten alias cortos ni rutas que no se puedan verificar.";
+  }
   if (path.find(L"\\..") != std::wstring::npos ||
       path.find(L"\\.\\") != std::wstring::npos ||
       path.find(L'\\', 3) == std::wstring::npos) {
@@ -93,6 +98,13 @@ std::string RecycleGuarded(HWND owner, const std::wstring& input,
   if (size != expected_size || modified != expected_modified) {
     return "El archivo cambio desde el analisis. Vuelve a analizar antes de eliminar.";
   }
+  return {};
+}
+
+std::string RecycleGuarded(HWND owner, const std::wstring& input,
+                           int64_t expected_size, int64_t expected_modified) {
+  const auto validation = ValidateRecyclePath(input, expected_size, expected_modified);
+  if (!validation.empty()) return validation;
   ComPtr<IFileOperation> operation;
   HRESULT hr = CoCreateInstance(CLSID_FileOperation, nullptr, CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&operation));

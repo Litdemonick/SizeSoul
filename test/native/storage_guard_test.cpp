@@ -1,4 +1,4 @@
-﻿#include "../../windows/runner/storage_guard.h"
+#include "../../windows/runner/storage_guard.h"
 #include <windows.h>
 #include <filesystem>
 #include <fstream>
@@ -22,6 +22,16 @@ int wmain() {
   std::filesystem::create_directories(fixtures);
   const auto file = fixtures / L"sizesoul-guard-test.txt";
   { std::ofstream out(file); out << "SizeSoul synthetic test fixture"; }
+  WIN32_FILE_ATTRIBUTE_DATA attributes{};
+  GetFileAttributesExW(file.c_str(), GetFileExInfoStandard, &attributes);
+  ULARGE_INTEGER written{};
+  written.LowPart = attributes.ftLastWriteTime.dwLowDateTime;
+  written.HighPart = attributes.ftLastWriteTime.dwHighDateTime;
+  const auto modified = static_cast<int64_t>(written.QuadPart / 10000) - 11644473600000LL;
+  const auto size = (static_cast<int64_t>(attributes.nFileSizeHigh) << 32) | attributes.nFileSizeLow;
+  const auto allowed = ValidateRecyclePath(file.wstring(), size, modified);
+  if (!allowed.empty()) { std::cerr << "FAIL: ordinary fixture rejected: " << allowed << '\n'; failures++; }
+  else { std::cout << "PASS: unchanged ordinary fixture accepted without deletion\n"; passed++; }
   blocked(file.wstring(), "changed scan metadata", 99999, 1);
   SetFileAttributesW(file.c_str(), FILE_ATTRIBUTE_HIDDEN);
   blocked(file.wstring(), "hidden file");

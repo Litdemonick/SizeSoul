@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:path/path.dart' as p;
+
 import '../../core/models/storage_models.dart';
 
 class ScanService {
@@ -75,7 +77,7 @@ class ScanService {
 }
 
 void _scan(List<Object> args) {
-  final path = args[0] as String;
+  final path = p.normalize(Directory(args[0] as String).absolute.path);
   final send = args[1] as SendPort;
   final clock = Stopwatch()..start();
   var skipped = 0, count = 0, lastUpdate = 0;
